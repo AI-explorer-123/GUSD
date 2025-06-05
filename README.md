@@ -1,7 +1,9 @@
 # GUSD: Genre-aware and User-specific Spoiler Detection
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 [![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?logo=PyTorch&logoColor=white)](https://pytorch.org/)
-Official code for [“Unveiling the Hidden: Movie Genre and User Bias in Spoiler Detection”](https://arxiv.org/abs/2504.17834).
+
+Official code for **ECML-PKDD 2025** paper [“Unveiling the Hidden: Movie Genre and User Bias in Spoiler Detection”](https://arxiv.org/abs/2504.17834).
 
 Authors: Haokai Zhang\*, Shengtao Zhang\*, Zijian Cai, Heng Wang, Ruixuan Zhu, Zinan Zeng, Minnan Luo†  
 
@@ -63,8 +65,7 @@ GUSD/
 ## 🛠 Requirements
 
 - Python ≥ 3.8  
-- PyTorch ≥ 1.9  
-- CUDA 11.x (for GPU)  
+- PyTorch ≥ 1.12.1 
 - Install dependencies:
   ```bash
   pip install -r requirements.txt
