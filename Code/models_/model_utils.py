@@ -107,16 +107,13 @@ def genre_forward(x, genre_num, genres):
     genre_feature = torch.zeros(
         genre_num, num_features, device=x.device, dtype=x.dtype)
 
-    # 调整 genres 中的体裁索引以从 0 开始
     genres = genres - 1
 
-    # 创建一个扩展的 x tensor，每行对应于 genres 中的每个体裁
     expanded_x = x.unsqueeze(1).expand(-1, 3, -1)
 
-    # 使用 mask 来排除 padding 体裁（即索引为 -1 的体裁）
-    valid_mask = genres >= 0  # 将无效体裁设置为 0，后续使用 valid_mask 过滤
-    valid_genres = (genres * valid_mask).view(-1, 1).expand(-1, num_features) # 变成[batch_size*3, num_features]
-    valid_x = (expanded_x * valid_mask.unsqueeze(2)).reshape(-1, num_features) # 变成[batch_size*3*num_features, num_features]
+    valid_mask = genres >= 0 
+    valid_genres = (genres * valid_mask).view(-1, 1).expand(-1, num_features)
+    valid_x = (expanded_x * valid_mask.unsqueeze(2)).reshape(-1, num_features)
 
     genre_feature.scatter_add_(0, valid_genres, valid_x)
 
@@ -148,7 +145,6 @@ def genre_backward(genres, genre_feature, pooling='mean'):
 def k_hop_adj(edge_index, num_nodes, k, device, ratio=1):
     edge_index_ = to_undirected(edge_index, num_nodes=num_nodes)
 
-    # 创建稀疏邻接矩阵
     adj = SparseTensor(row=edge_index_[0], col=edge_index_[
                        1], sparse_sizes=(num_nodes, num_nodes))
 
@@ -159,56 +155,45 @@ def k_hop_adj(edge_index, num_nodes, k, device, ratio=1):
 
         adj_n = adj_n @ adj
 
-        # 转换edge_index格式
         row, col, _ = adj_n.coo()
-        # 返回时，>1即为出现一次，值结果并不影响出现的边数目，因为coo返回的值被接受为 _ 存储的是对应点的值
         edge_index_k_hop = torch.stack([row, col], dim=0)
 
         num_edges = edge_index_k_hop.size(1)
         num_samples = int(num_edges * ratio)
 
-        # 随机生成要保留的边的索引
         indices = torch.randperm(num_edges, device=device)[:num_samples]
 
-        # 使用随机选择的索引获取边
         edge_index_k_hop = edge_index_k_hop[:, indices]
         edge_index_k_hops.append(edge_index_k_hop)
     return edge_index_k_hops
 
 
 def k_hop_neighbors_with_min_distance(edge_index, num_nodes, k, device, ratio=1):
-    # 创建邻接矩阵的稀疏表示
     max_k = 100
 
-    edge_index_ = to_undirected(edge_index, num_nodes=num_nodes)  # 无向图
+    edge_index_ = to_undirected(edge_index, num_nodes=num_nodes) 
 
     values = torch.ones(edge_index_.size(1), device=device)
     adjacency_matrix = torch.sparse.FloatTensor(
         edge_index_, values, torch.Size([num_nodes, num_nodes]))
 
-    # 初始化距离矩阵D
     D = torch.full((num_nodes, num_nodes), float('inf'), device=device)
     D.scatter_(1, torch.arange(
-        num_nodes, device=device).view(1, -1), 0)  # 设置自环距离为0\
+        num_nodes, device=device).view(1, -1), 0)
 
     edge_index_k_hops = []
     edge_index_k_hops.append(edge_index)
-    # 进行k次幂运算，更新距离矩阵D
     A_power = adjacency_matrix.clone()
     for i in range(1, k+1):
-        # 对于直接相连的节点，距离设置为1
         if i == 1:
             D[A_power.coalesce().indices()[0], A_power.coalesce().indices()[1]] = 1
         else:
-            A_power = torch.sparse.mm(A_power, adjacency_matrix)  # A^i
-            # 将所有大于0的值置为1，其余保持不变
+            A_power = torch.sparse.mm(A_power, adjacency_matrix)
             A_binary = (A_power.to_dense() > 0).float()
-            # 将非零值乘以i，0值设置为inf
-            A_distance = A_binary * i + (1 - A_binary) * max_k  # 避免出现0*inf=nan
+            A_distance = A_binary * i + (1 - A_binary) * max_k
 
             # A_distance = torch.where(A_binary > 0, A_binary * i, torch.tensor(float('inf')))
 
-            # 更新D矩阵，只保留最小值
             D = torch.min(D, A_distance)
             edge_index_k_hop = D == torch.full(
                 (num_nodes, num_nodes), i, device=device)

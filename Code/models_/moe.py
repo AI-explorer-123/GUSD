@@ -3,6 +3,14 @@ import torch.nn as nn
 from torch.distributions.normal import Normal
 import numpy as np
 
+# Sparsely-Gated Mixture-of-Experts Layers.
+# See "Outrageously Large Neural Networks"
+# https://arxiv.org/abs/1701.06538
+#
+# Author: David Rau
+#
+# The code is based on the TensorFlow implementation:
+# https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/utils/expert_utils.py
 
 class SparseDispatcher(object):
     """Helper for implementing a mixture of experts.
