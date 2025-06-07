@@ -62,12 +62,6 @@ GUSD/
 │       ├── build_map.py
 │       ├── change_nodes.py
 │       ├── genre.py
-│       ├── KG
-│       │   ├── get_emb.py
-│       │   ├── main.py
-│       │   ├── preprocess.py
-│       │   ├── test.ipynb
-│       │   └── transE.py
 │       ├── llm
 │       │   ├── expl_to_emb.py
 │       │   ├── llm.py
@@ -115,7 +109,7 @@ Key packages: `torch`, `torch-geometric`, `transformers`, `yacs`, `accelerate`, 
    2. After getting the raw data, you can preprocessing the data using code in  `Data/process_lcs`.
    3. When you get the preprocessed data, put them in `Data/processed_lcs_data`.
 2. IMDb Dataset
-   1. We provide preprocessed data for the Kaggle dataset, which can be directly download from [Google Drive](https://drive.google.com/file/d/1uN3utgi-puUzQKTCWj5UK4acalBzJH9M/view?usp=sharing).
+   1. We provide preprocessed data for the Kaggle dataset, which can be directly download from [Google Drive](https://drive.google.com/file/d/1lBR1eohYUlJEWxUDHQa23rwx3UwuiUCm/view?usp=sharing).
    2. When you get the preprocessed data, put them in `Data/processed_imdb_data`.
 
 ---
