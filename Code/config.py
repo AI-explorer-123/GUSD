@@ -10,6 +10,8 @@ def set_cfg(cfg):
     cfg.device = 1
     cfg.seed = 0
     cfg.dataset = 'imdb'
+    cfg.imdb_path = './Data/processed_imdb_data'
+    cfg.lcs_path = './Data/processed_lcs_data'
     cfg.mask = 'all'
     cfg.feature = 'all'
     cfg.lm_model = 'roberta'

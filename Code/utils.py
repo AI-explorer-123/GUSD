@@ -128,7 +128,7 @@ def load_data(cfg):
 
 
 def load_lcs_data(cfg):
-    path = "/data3/whr/zhk/Spoiler_Detection/Data/processed_lcs_data/"
+    path = cfg.lcs_path
 
     base_edge_index = torch.load(
         path+"edge/base_edge_index.pt").to(torch.long)
@@ -207,7 +207,7 @@ def load_lcs_data(cfg):
 
 
 def load_imdb_data(cfg):
-    path = "/data3/whr/zhk/Spoiler_Detection/Data/processed_imdb_data/"
+    path = cfg.imdb_path
 
     edge_index = torch.load(path+"edge/base_edge_index.pt").to(torch.long)
     edge_type = torch.load(

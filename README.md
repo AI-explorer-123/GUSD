@@ -38,26 +38,65 @@ Authors: Haokai Zhang\*, Shengtao Zhang\*, Zijian Cai, Heng Wang, Ruixuan Zhu, Z
 
 ```
 GUSD/
-├── .gitignore
-├── README.md                  ← this file
-├── paper.md                   ← full paper
-├── config.py                  ← default hyperparams & paths
-├── utils.py                   ← data loaders, batching, metrics
-├── main.py                    ← baseline train/eval
-├── changed_main.py            ← improved-module experiments
-├── ace_changed_main.py        ← Accelerate (distributed) training
-├── hetero_main.py             ← heterogeneous-graph variant
-├── new_main.py                ← new GMoE variant
-└── models_/
-    ├── main_model.py          ← GUSD model (R2GFormer + GMoE + fusion)
-    ├── meta_encoder.py        ← user/movie metadata encoder
-    ├── model_utils.py         ← shared layers, loss, metrics
-    ├── moe.py                 ← GMoE implementation
-    ├── new_moe.py             ← alternative MoE design
-    ├── test.py                ← unit tests
-    └── graph_encoder/
-        ├── Conv.py            ← RetGAT multi-hop graph conv
-        └── models.py          ← GenreFormer & graph modules
+├── Code
+│   ├── ace_changed_main.py
+│   ├── config.py
+│   ├── hetero_main.py
+│   ├── main.py
+│   ├── models_
+│   │   ├── graph_encoder
+│   │   │   ├── Conv.py
+│   │   │   ├── models.py
+│   │   ├── main_model.py
+│   │   ├── meta_encoder.py
+│   │   ├── model_utils.py
+│   │   ├── moe.py
+│   │   ├── new_moe.py
+│   └── utils.py
+├── Data
+│   ├── process_imdb
+│   │   ├── mask_genre.py
+│   │   ├── movie_genre.py
+│   │   ├── movie_id.py
+│   │   ├── nodes.py
+│   │   ├── review_genre.py
+│   │   ├── semantic.py
+│   │   ├── time.py
+│   │   └── users.py
+│   └── process_lcs
+│       ├── build_map.py
+│       ├── change_nodes.py
+│       ├── genre.py
+│       ├── KG
+│       │   ├── get_emb.py
+│       │   ├── main.py
+│       │   ├── preprocess.py
+│       │   ├── test.ipynb
+│       │   └── transE.py
+│       ├── llm
+│       │   ├── expl_to_emb.py
+│       │   ├── llm.py
+│       │   ├── prompt.py
+│       │   └── user_prompt.py
+│       ├── mask
+│       │   ├── mask.py
+│       ├── mask_genre.py
+│       ├── meta.py
+│       ├── movie_genre.py
+│       ├── movie_id.py
+│       ├── nodes.py
+│       ├── review_genre.py
+│       ├── semantic
+│       │   ├── kg_semantic.py
+│       │   ├── semantic.py
+│       │   └── user_bias_semantic.py
+│       ├── time.py
+│       ├── user_centered.py
+│       └── z_score.py
+├── images
+│   └── ovreview.png
+├── README.md
+├── requirements.txt
 ```
 
 ---
@@ -74,43 +113,21 @@ Key packages: `torch`, `torch-geometric`, `transformers`, `yacs`, `accelerate`, 
 
 ---
 
-## 🛠 Data Preparation
+## 🛠 Dataset Preparation
 
-1. Place raw LCS/Kaggle data under `data/raw/`, the data will be available soon.  
-2. Run preprocessing:
-   ```bash
-   python utils.py \
-     --mode preprocess \
-     --input_dir data/raw \
-     --output_dir data/processed
-   ```
+1. LCS Dataset
+   1. The LCS dataset is available at [Google Drive](https://drive.google.com/drive/folders/1By6_vmaOAaLnZGwrFCGb8UeP8eB2ae4L?usp=share_link). Please apply for access by contacting wh2213210554@stu.xjtu.edu.cn with your institutional email address and clearly state your institution, your research advisor (if any), and your use case of the data.
+   2. After getting the raw data, you can preprocessing the data using code in  `Data/process_lcs`.
+   3. When you get the preprocessed data, put them in `Data/processed_lcs_data`.
+2. IMDb Dataset
+   1. We provide preprocessed data for the Kaggle dataset, which can be directly download from [Google Drive](https://drive.google.com/file/d/1uN3utgi-puUzQKTCWj5UK4acalBzJH9M/view?usp=sharing).
+   2. When you get the preprocessed data, put them in `Data/processed_imdb_data`.
 
 ---
 
 ## 📊 Configuration
 
-Edit `config.py` or supply a YAML file via `--config` to override defaults.  
-Example fields in `config.py`:
-
-```python
-DATA = {
-    'LCS': 'data/processed/lcs/',
-    'KAGGLE': 'data/processed/kaggle/'
-}
-TRAIN = {
-    'batch_size': 64,
-    'lr': 1e-4,
-    'weight_decay': 1e-5,
-    'epochs': 20,
-    'num_hops': 2,
-    'weight': 1.3
-}
-MODEL = {
-    'graph_encoder': { 'layers': 2, 'hidden_channels': 1024, … },
-    'meta_encoder':  { 'layers': 3, 'out_channels': 1024 },
-    'moe':           { 'num_experts': 32, 'hidden_channels': 4096, … }
-}
-```
+Edit `Code/config.py` or specify parameters when running python files to override defaults.
 
 ---
 
@@ -119,72 +136,86 @@ MODEL = {
 ### Baseline Training
 
 ```bash
-python main.py \
-  --dataset LCS \
-  --mode train \
-  --save_dir outputs/lcs_baseline
-```
-
-### Improved Variants
-
-```bash
-python changed_main.py \
-  --dataset KAGGLE \
-  --mode train \
-  --save_dir outputs/kaggle_changed
+working_dir=$(pwd)
+echo -n "Enter train name: "
+read train_name
+mkdir -p "$working_dir/result"
+mkdir -p "$working_dir/model/$train_name"
+for seed in 0 1 2 3 4;
+do
+    python -m main \
+        seed $seed \
+        device 1 \
+        dataset lcs \
+        fine_tuning True \
+        train.batch_size 128 \
+        model.moe.type 'new moe' \
+        model.name 'full' \
+        model.graph_encoder.name 'K-Genreformer' \
+        train.name "" \
+        train.save_dir "$working_dir/model/$train_name" \
+        >> "$working_dir/result/$train_name.txt"
+done
 ```
 
 ### Accelerated / Distributed Training
 
 ```bash
-accelerate launch ace_changed_main.py \
-  --config configs/your_config.yaml \
-  --opts dataset LCS train.epochs 30
+working_dir=$(pwd)
+echo -n "Enter train name: "
+read train_name
+mkdir -p "$working_dir/result"
+mkdir -p "$working_dir/model/$train_name"
+
+for seed in 0 1 2 3 4
+do
+    CUDA_VISIBLE_DEVICES=0,1 accelerate launch  \
+            --config_file /data3/whr/zhk/Spoiler_Detection/code/MOESD/config.yaml \
+            --num_processes 2 \
+            --gpu_ids 0,2 \
+            --main_process_port 29555 \
+            ace_changed_main.py \
+            seed $seed \
+            model.moe.num_experts 32 \
+            model.name 'pe_smoe' \
+            model.graph_encoder.in_channels 1152 \
+            model.graph_encoder.hidden_channels 1152 \
+            train.num_hops 2 \
+            train.epochs 20 \
+            train.batch_size 128 \
+            train.lr 1e-4 \
+            train.weight_decay 1e-5 \
+            train.weight 1.3 \
+            train.save_dir "$working_dir/model/$train_name" \
+        >> "$working_dir/result/$train_name.txt"
+done
 ```
 
 ### Heterogeneous‐Graph Variant
 
 ```bash
-python hetero_main.py \
-  --dataset LCS \
-  --mode train \
-  --save_dir outputs/lcs_hetero
+working_dir=$(pwd)
+echo -n "Enter train name: "
+read train_name
+mkdir -p "$working_dir/result"
+mkdir -p "$working_dir/model/$train_name"
+
+for seed in 0 1 2 3 4
+do
+    python -m hetero_main \
+        seed $seed \
+        device 0 \
+        dataset lcs \
+        fine_tuning False \
+        train.batch_size 512 \
+        model.name 'hgt' \
+        train.name '' \
+        train.save_dir "$working_dir/model/" \
+        train.note "hgt, lcs" \
+        >> "$working_dir/result/$train_name.txt"
+done
+
 ```
-
-### New MoE Variant
-
-```bash
-python new_main.py \
-  --dataset KAGGLE \
-  --mode train \
-  --save_dir outputs/kaggle_newmoe
-```
-
-### Testing
-
-```bash
-python -m models_.test
-```
-
----
-
-## Model Overview
-
-- **Data & Batching** (`utils.py`): k-hop subgraph sampling, genre-aware batching, user-bias loading.  
-- **Graph Encoder** (`graph_encoder/`): RetGAT multi-hop GAT + GenreFormer for inter-genre fusion.  
-- **Meta Encoder** (`meta_encoder.py`): MLP for user/movie metadata.  
-- **GMoE** (`moe.py`, `new_moe.py`): genre-aware Mixture-of-Experts routing.  
-- **Main Model** (`main_model.py`): combines graph, meta, user bias, textual features & classifier.
-
----
-
-## Results & Reproducibility
-
-See [out paper](https://arxiv.org/abs/2504.17834) for detailed tables and figures:
-
-- **LCS**: +6.1% F1, +5.5% AUC over previous SOTA.  
-- **Kaggle**: similar improvements.  
-- Ablation confirms RetGAT, GenreFormer, GMoE, and user bias contributions.
 
 ---
 
@@ -203,5 +234,4 @@ See [out paper](https://arxiv.org/abs/2504.17834) for detailed tables and figure
 
 ## License
 
-MIT © Haokai Zhang et al.  
-See [LICENSE](LICENSE) for details.
+MIT © Haokai Zhang et al.
